@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Loyen Wear — Conceito de Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>tailwind.config={theme:{extend:{colors:{cream:'#FAF7F2',sand:'#F1EBE0',beige:'#D9CBB4',ink:'#1C1B19'},fontFamily:{serif:['"Cormorant Garamond"','Georgia','serif'],sans:['Inter','system-ui','sans-serif']}}}}</script>
+<style>
+html{scroll-behavior:smooth}body{background:#FAF7F2;color:#1C1B19;font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}.fade{animation:up .6s ease both}
+@keyframes slide{from{transform:translateX(100%)}to{transform:none}}.slide{animation:slide .3s ease both}
+.card:hover .vis{transform:scale(1.04)}.vis{transition:transform .7s ease}
+button{cursor:pointer}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<script type="text/plain" id="src">
+const { useState, useMemo, useEffect } = React;
+
+type Kind = 'top' | 'pants' | 'jacket' | 'set';
+type Cat = { id: string; n: string; k: Kind };
+type Color = { n: string; h: string };
+type Product = { id: number; n: string; cat: string; price: number; was?: number; colors: Color[]; desc: string };
+type Line = { key: string; id: number; size: string; color: string; qty: number };
+type View = { p: 'home' | 'shop' | 'product' | 'about' | 'contact'; id?: number; cat?: string };
+
+const CATS: Cat[] = [
+  { id: 'polo', n: 'Camisas Polo', k: 'top' }, { id: 'tee', n: 'Camisetas', k: 'top' },
+  { id: 'shirt', n: 'Camisas', k: 'top' }, { id: 'trouser', n: 'Calças', k: 'pants' },
+  { id: 'jacket', n: 'Jaquetas', k: 'jacket' }, { id: 'set', n: 'Conjuntos', k: 'set' },
+];
+const C = { sand: { n: 'Areia', h: '#D8C7A8' }, black: { n: 'Preto', h: '#23221F' }, navy: { n: 'Marinho', h: '#2B3A55' }, olive: { n: 'Oliva', h: '#6B6B4A' }, white: { n: 'Off-white', h: '#EFEBE3' }, stone: { n: 'Pedra', h: '#A9A194' }, brown: { n: 'Moca', h: '#7A5C45' } };
+const D = 'Descrição de exemplo. Substituir pelo texto real do produto, composição do tecido e instruções de cuidado fornecidos pela Loyen Wear.';
+const P = (id: number, n: string, cat: string, price: number, colors: Color[], was?: number): Product => ({ id, n, cat, price, was, colors, desc: D });
+const PRODUCTS: Product[] = [
+  P(1, 'Polo Piqué Clássica', 'polo', 129, [C.navy, C.white, C.black]),
+  P(2, 'Polo com Gola de Malha', 'polo', 149, [C.sand, C.olive], 189),
+  P(3, 'Camiseta Essencial de Algodão', 'tee', 79, [C.white, C.black, C.stone]),
+  P(4, 'Camiseta Gola Redonda Pesada', 'tee', 99, [C.brown, C.black]),
+  P(5, 'Camisa de Linho com Botões', 'shirt', 169, [C.sand, C.white, C.navy]),
+  P(6, 'Camisa Oxford do Dia a Dia', 'shirt', 159, [C.white, C.stone], 199),
+  P(7, 'Calça Chino de Alfaiataria', 'trouser', 189, [C.sand, C.olive, C.black]),
+  P(8, 'Calça Pregueada Relaxada', 'trouser', 209, [C.stone, C.navy]),
+  P(9, 'Jaqueta Camisa Leve', 'jacket', 279, [C.olive, C.brown]),
+  P(10, 'Jaqueta Harrington', 'jacket', 319, [C.black, C.sand], 399),
+  P(11, 'Conjunto Polo e Calça', 'set', 289, [C.navy, C.sand]),
+  P(12, 'Conjunto Camisa de Linho e Bermuda', 'set', 259, [C.white, C.olive]),
+];
+const fmt = (n: number) => 'R$ ' + n.toFixed(2).replace('.', ',');
+const SIZES = ['P', 'M', 'G', 'GG', 'XG'];
+
+const ICON: Record<string, string> = {
+  search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3',
+  bag: 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0',
+  menu: 'M4 6h16M4 12h16M4 18h16', x: 'M18 6 6 18M6 6l12 12', plus: 'M12 5v14M5 12h14', minus: 'M5 12h14',
+  truck: 'M1 3h15v13H1zM16 8h4l3 3v5h-7zM5.5 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18.5 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  refresh: 'M23 4v6h-6M1 20v-6h6M3.5 9a9 9 0 0 1 15-3.4L23 10M1 14l4.5 4.4A9 9 0 0 0 20.5 15',
+  lock: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4', chat: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',
+  arrow: 'M5 12h14M12 5l7 7-7 7', check: 'M20 6 9 17l-5-5', down: 'M6 9l6 6 6-6',
+  insta: 'M3 3h18v18H3zM16 11.4a4 4 0 1 1-7.9 1.2 4 4 0 0 1 7.9-1.2zM17.5 6.5h.01',
+  fb: 'M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z',
+  mail: 'M4 4h16v16H4zM22 6l-10 7L2 6',
+};
+const Icon = ({ n, s = 20 }: { n: string; s?: number }) => (
+  <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={ICON[n]} /></svg>
+);
+
+const SHAPES: Record<string, string> = {
+  top: 'M30 14 10 28l10 20 10-6v64h40V42l10 6 10-20L70 14Q50 30 30 14Z',
+  pants: 'M30 10h40l4 102H54L50 44l-4 68H26Z',
+  jacket: 'M32 12Q50 24 68 12l24 18-6 66H72v10H28V96H14L8 30Z',
+};
+const Vis = ({ k, tone = '#D8C7A8', view = 0, label = true, className = '' }: { k: Kind; tone?: string; view?: number; label?: boolean; className?: string }) => (
+  <div className={'relative overflow-hidden ' + className} style={{ background: `linear-gradient(${150 + view * 35}deg,#F3EDE2,#E4D9C6 60%,#D5C7AE)` }}>
+    <div className="vis absolute inset-0 grid place-items-center">
+      <svg viewBox="0 0 100 120" className="h-[68%]" style={{ filter: 'drop-shadow(0 14px 18px rgba(28,27,25,.18))' }}>
+        {k === 'set' ? <g><path d={SHAPES.top} fill={tone} transform="translate(-6 -6) scale(.8)" /><path d={SHAPES.pants} fill={tone} opacity=".8" transform="translate(30 30) scale(.7)" /></g> : <path d={SHAPES[k]} fill={tone} />}
+      </svg>
+    </div>
+    {label && <span className="absolute bottom-2 left-3 text-[10px] uppercase tracking-widest text-ink/40">Imagem de exemplo</span>}
+  </div>
+);
+
+const Btn = ({ children, onClick, v = 'dark', className = '', disabled }: any) => (
+  <button disabled={disabled} onClick={onClick} className={`inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-medium tracking-wide transition active:scale-[.98] disabled:opacity-40 ${v === 'dark' ? 'bg-ink text-cream hover:bg-black' : v === 'light' ? 'bg-cream text-ink hover:bg-white' : 'border border-ink/25 hover:border-ink'} ${className}`}>{children}</button>
+);
+
+function Nav({ go, cartCount, openCart, openSearch }: any) {
+  const [m, setM] = useState(false); const [dd, setDd] = useState(false);
+  const link = (l: string, f: () => void) => <button key={l} onClick={() => { f(); setM(false); setDd(false); }} className="text-sm hover:text-ink/60 transition">{({ Home: 'Início', Shop: 'Loja', About: 'Sobre', Contact: 'Contato' } as Record<string, string>)[l]}</button>;
+  return (
+    <header className="sticky top-0 z-40 border-b border-ink/10 bg-cream/90 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
+        <button className="lg:hidden" aria-label="Menu" onClick={() => setM(!m)}><Icon n={m ? 'x' : 'menu'} /></button>
+        <button onClick={() => go({ p: 'home' })} className="font-serif text-2xl tracking-[.28em]">LOYEN</button>
+        <nav className="hidden items-center gap-9 lg:flex">
+          {link('Home', () => go({ p: 'home' }))}{link('Shop', () => go({ p: 'shop' }))}
+          <div className="relative">
+            <button onClick={() => setDd(!dd)} className="flex items-center gap-1 text-sm hover:text-ink/60">Categorias <Icon n="down" s={14} /></button>
+            {dd && <div className="fade absolute left-1/2 top-9 w-52 -translate-x-1/2 rounded-2xl border border-ink/10 bg-cream p-2 shadow-xl">
+              {CATS.map(c => <button key={c.id} onClick={() => { go({ p: 'shop', cat: c.id }); setDd(false); }} className="block w-full rounded-xl px-4 py-2.5 text-left text-sm hover:bg-sand">{c.n}</button>)}</div>}
+          </div>
+          {link('About', () => go({ p: 'about' }))}{link('Contact', () => go({ p: 'contact' }))}
+        </nav>
+        <div className="flex items-center gap-4">
+          <button aria-label="Buscar" onClick={openSearch}><Icon n="search" /></button>
+          <button aria-label="Carrinho" onClick={openCart} className="relative"><Icon n="bag" />
+            {cartCount > 0 && <span className="absolute -right-2 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-ink px-1 text-[10px] text-cream">{cartCount}</span>}</button>
+        </div>
+      </div>
+      {m && <div className="fade flex flex-col items-start gap-5 border-t border-ink/10 px-5 py-6 lg:hidden">
+        {link('Home', () => go({ p: 'home' }))}{link('Shop', () => go({ p: 'shop' }))}
+        <div className="flex flex-wrap gap-2">{CATS.map(c => <button key={c.id} onClick={() => { go({ p: 'shop', cat: c.id }); setM(false); }} className="rounded-full border border-ink/20 px-4 py-1.5 text-xs">{c.n}</button>)}</div>
+        {link('About', () => go({ p: 'about' }))}{link('Contact', () => go({ p: 'contact' }))}</div>}
+    </header>
+  );
+}
+
+function SearchOverlay({ close, go }: any) {
+  const [q, setQ] = useState('');
+  const res = PRODUCTS.filter(p => q && p.n.toLowerCase().includes(q.toLowerCase()));
+  return (
+    <div className="fixed inset-0 z-50 bg-ink/40" onClick={close}>
+      <div className="fade mx-auto mt-0 max-w-2xl rounded-b-3xl bg-cream p-6 sm:mt-16 sm:rounded-3xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 border-b border-ink/15 pb-3"><Icon n="search" />
+          <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar na coleção" className="w-full bg-transparent text-lg outline-none" />
+          <button onClick={close} aria-label="Close"><Icon n="x" /></button></div>
+        <div className="mt-3 max-h-80 overflow-auto">
+          {q && !res.length && <p className="py-6 text-sm text-ink/50">Nenhum resultado para “{q}”.</p>}
+          {res.map(p => <button key={p.id} onClick={() => { go({ p: 'product', id: p.id }); close(); }} className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left hover:bg-sand"><span>{p.n}</span><span className="text-sm text-ink/60">{fmt(p.price)}</span></button>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CartDrawer({ lines, setQty, close, total, checkout }: any) {
+  return (
+    <div className="fixed inset-0 z-50 bg-ink/40" onClick={close}>
+      <aside className="slide absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-cream p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between"><h2 className="font-serif text-3xl">Seu carrinho</h2><button onClick={close} aria-label="Close"><Icon n="x" /></button></div>
+        <div className="mt-6 flex-1 space-y-5 overflow-auto">
+          {!lines.length && <p className="text-sm text-ink/50">Seu carrinho está vazio.</p>}
+          {lines.map((l: Line) => { const p = PRODUCTS.find(x => x.id === l.id)!; const col = p.colors.find(c => c.n === l.color)!; const k = CATS.find(c => c.id === p.cat)!.k;
+            return (<div key={l.key} className="flex gap-4"><Vis k={k} tone={col.h} label={false} className="h-24 w-20 shrink-0 rounded-xl" />
+              <div className="flex-1 text-sm"><p className="font-medium">{p.n}</p><p className="text-ink/50">{l.color} · {l.size}</p>
+                <div className="mt-2 flex items-center gap-3 rounded-full border border-ink/20 px-2 py-1 w-fit">
+                  <button aria-label="Less" onClick={() => setQty(l.key, l.qty - 1)}><Icon n="minus" s={14} /></button><span className="w-4 text-center">{l.qty}</span>
+                  <button aria-label="More" onClick={() => setQty(l.key, l.qty + 1)}><Icon n="plus" s={14} /></button></div></div>
+              <p className="text-sm">{fmt(p.price * l.qty)}</p></div>); })}
+        </div>
+        <div className="border-t border-ink/10 pt-5"><div className="mb-4 flex justify-between"><span>Subtotal</span><span className="font-medium">{fmt(total)}</span></div>
+          <Btn className="w-full" disabled={!lines.length} onClick={checkout}>Finalizar compra (demonstração)</Btn>
+          <p className="mt-3 text-center text-xs text-ink/50">Apenas conceito — nenhum pagamento real é processado.</p></div>
+      </aside>
+    </div>
+  );
+}
+
+function Hero({ go }: any) {
+  return (
+    <section className="relative min-h-[88vh] overflow-hidden bg-[#CDBFA6]">
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 72% 40%,#EDE3D0 0,#D2C3A8 45%,#9C8B70 100%)' }} />
+      <svg viewBox="0 0 100 120" className="absolute bottom-0 right-[-8%] h-[92%] sm:right-[6%]" style={{ filter: 'drop-shadow(0 30px 40px rgba(28,27,25,.3))' }}><path d={SHAPES.jacket} fill="#2B2A27" /><path d={SHAPES.top} fill="#EFEBE3" transform="translate(22 8) scale(.55)" /></svg>
+      <div className="absolute inset-0 bg-gradient-to-r from-cream/85 via-cream/40 to-transparent" />
+      <div className="relative mx-auto flex min-h-[88vh] max-w-7xl items-end px-5 pb-16 sm:items-center sm:pb-0 lg:px-8">
+        <div className="fade max-w-xl">
+          <p className="mb-4 text-xs uppercase tracking-[.3em] text-ink/60">Nova estação · Masculino</p>
+          <h1 className="font-serif text-5xl leading-[1.02] sm:text-7xl">Elegância para Todos os Dias</h1>
+          <p className="mt-5 max-w-md text-base text-ink/70">Essenciais pensados em tecidos refinados. Peças versáteis para ir das reuniões da manhã aos compromissos da noite.</p>
+          <div className="mt-8 flex flex-wrap gap-3"><Btn onClick={() => go({ p: 'shop' })}>Comprar Coleção <Icon n="arrow" s={16} /></Btn><Btn v="ghost" onClick={() => document.getElementById('cats')?.scrollIntoView()}>Ver categorias</Btn></div>
+          <p className="mt-8 text-[10px] uppercase tracking-widest text-ink/40">Visual conceitual · substituir por fotografia de campanha</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Categories({ go }: any) {
+  return (
+    <section id="cats" className="mx-auto max-w-7xl px-5 py-20 lg:px-8">
+      <div className="mb-10 flex items-end justify-between"><h2 className="font-serif text-4xl sm:text-5xl">Compre por categoria</h2></div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 lg:gap-6">
+        {CATS.map((c, i) => (
+          <button key={c.id} onClick={() => go({ p: 'shop', cat: c.id })} className="card group relative overflow-hidden rounded-3xl text-left">
+            <Vis k={c.k} tone={[C.navy, C.black, C.sand, C.olive, C.brown, C.stone][i].h} className="aspect-[4/5] w-full" />
+            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-ink/55 to-transparent p-4 pt-12 text-cream sm:p-6">
+              <span className="font-serif text-xl sm:text-2xl">{c.n}</span><Icon n="arrow" /></div>
+          </button>))}
+      </div>
+    </section>
+  );
+}
+
+function ProductCard({ p, go, add }: { p: Product; go: (v: View) => void; add: (p: Product) => void }) {
+  const [ci, setCi] = useState(0); const k = CATS.find(c => c.id === p.cat)!.k;
+  return (
+    <div className="card group">
+      <div className="relative overflow-hidden rounded-2xl">
+        <button onClick={() => go({ p: 'product', id: p.id })} className="block w-full" aria-label={p.n}><Vis k={k} tone={p.colors[ci].h} className="aspect-[3/4] w-full" /></button>
+        {p.was && <span className="absolute left-3 top-3 rounded-full bg-ink px-3 py-1 text-[11px] text-cream">Promoção</span>}
+        <button onClick={() => add(p)} className="absolute inset-x-3 bottom-3 translate-y-2 rounded-full bg-cream/95 py-2.5 text-xs font-medium opacity-100 shadow transition sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100">Adicionar rápido</button>
+      </div>
+      <div className="mt-3 flex items-start justify-between gap-3">
+        <div><button onClick={() => go({ p: 'product', id: p.id })} className="text-left text-sm font-medium">{p.n}</button>
+          <div className="mt-2 flex gap-1.5">{p.colors.map((c, i) => <button key={c.n} aria-label={c.n} onClick={() => setCi(i)} className={`h-4 w-4 rounded-full border ${i === ci ? 'ring-1 ring-ink ring-offset-2 ring-offset-cream' : 'border-ink/20'}`} style={{ background: c.h }} />)}</div></div>
+        <div className="text-right text-sm">{p.was && <span className="mr-2 text-ink/40 line-through">{fmt(p.was)}</span>}<span>{fmt(p.price)}</span></div>
+      </div>
+    </div>
+  );
+}
+
+function Featured({ go, add }: any) {
+  return (
+    <section className="bg-sand/60 py-20"><div className="mx-auto max-w-7xl px-5 lg:px-8">
+      <div className="mb-10 flex items-end justify-between"><h2 className="font-serif text-4xl sm:text-5xl">Peças em destaque</h2><button onClick={() => go({ p: 'shop' })} className="text-sm underline underline-offset-4">Ver tudo</button></div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4 lg:gap-x-6">{PRODUCTS.filter(p => [1, 5, 7, 10].includes(p.id) || p.was).slice(0, 4).map(p => <ProductCard key={p.id} p={p} go={go} add={add} />)}</div>
+      <p className="mt-8 text-xs text-ink/50">Produtos e preços de exemplo, apenas para demonstração.</p></div></section>
+  );
+}
+
+function Trust() {
+  const items = [['truck', 'Envio', 'Texto provisório: prazos de entrega e valor mínimo para frete grátis a confirmar.'], ['refresh', 'Trocas e devoluções', 'Texto provisório: prazo e condições de devolução a confirmar.'], ['lock', 'Pagamento seguro', 'Texto provisório: formas de pagamento aceitas a confirmar.'], ['chat', 'Atendimento ao cliente', 'Texto provisório: horários e canais de atendimento a confirmar.']];
+  return (
+    <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8"><div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+      {items.map(([i, t, d]) => <div key={t} className="rounded-3xl border border-ink/10 p-7"><span className="grid h-11 w-11 place-items-center rounded-full bg-beige/60"><Icon n={i} /></span><h3 className="mt-5 font-serif text-2xl">{t}</h3><p className="mt-2 text-sm text-ink/60">{d}</p></div>)}</div></section>
+  );
+}
+
+function Shop({ cat, go, add }: any) {
+  const [sort, setSort] = useState('feat'); const [sale, setSale] = useState(false);
+  const list = useMemo(() => {
+    let l = PRODUCTS.filter(p => (!cat || p.cat === cat) && (!sale || p.was));
+    if (sort === 'lo') l = [...l].sort((a, b) => a.price - b.price); if (sort === 'hi') l = [...l].sort((a, b) => b.price - a.price); return l;
+  }, [cat, sort, sale]);
+  const chip = (on: boolean) => `rounded-full border px-4 py-2 text-sm transition ${on ? 'border-ink bg-ink text-cream' : 'border-ink/20 hover:border-ink'}`;
+  return (
+    <section className="fade mx-auto max-w-7xl px-5 py-12 lg:px-8">
+      <h1 className="font-serif text-5xl">{cat ? CATS.find(c => c.id === cat)!.n : 'A coleção'}</h1>
+      <div className="mt-8 flex flex-wrap items-center gap-2">
+        <button className={chip(!cat)} onClick={() => go({ p: 'shop' })}>Todos</button>
+        {CATS.map(c => <button key={c.id} className={chip(cat === c.id)} onClick={() => go({ p: 'shop', cat: c.id })}>{c.n}</button>)}
+        <div className="ml-auto flex items-center gap-2"><button className={chip(sale)} onClick={() => setSale(!sale)}>Em promoção</button>
+          <select value={sort} onChange={e => setSort(e.target.value)} className="rounded-full border border-ink/20 bg-cream px-4 py-2 text-sm"><option value="feat">Destaques</option><option value="lo">Preço: menor para maior</option><option value="hi">Preço: maior para menor</option></select></div></div>
+      {list.length ? <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4 lg:gap-x-6">{list.map(p => <ProductCard key={p.id} p={p} go={go} add={add} />)}</div> : <p className="py-20 text-center text-ink/50">Nenhum produto corresponde a estes filtros.</p>}
+    </section>
+  );
+}
+
+function Acc({ t, children }: any) {
+  const [o, setO] = useState(false);
+  return <div className="border-b border-ink/10"><button onClick={() => setO(!o)} className="flex w-full items-center justify-between py-4 text-sm font-medium">{t}<Icon n={o ? 'minus' : 'plus'} s={16} /></button>{o && <p className="pb-4 text-sm text-ink/60">{children}</p>}</div>;
+}
+
+function ProductPage({ id, go, addLine }: any) {
+  const p = PRODUCTS.find(x => x.id === id)!; const k = CATS.find(c => c.id === p.cat)!.k;
+  const [ci, setCi] = useState(0); const [size, setSize] = useState(''); const [qty, setQty] = useState(1); const [view, setView] = useState(0); const [guide, setGuide] = useState(false); const [err, setErr] = useState(false);
+  const views = ['Frente', 'Costas', 'Detalhe', 'Look'];
+  const submit = () => { if (!size) return setErr(true); addLine(p, size, p.colors[ci].n, qty); };
+  return (
+    <section className="fade mx-auto max-w-7xl px-5 py-10 lg:px-8">
+      <button onClick={() => go({ p: 'shop', cat: p.cat })} className="mb-6 text-sm text-ink/60 hover:text-ink">← Voltar para {CATS.find(c => c.id === p.cat)!.n}</button>
+      <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row">
+          <div className="flex gap-3 sm:flex-col">{views.map((v, i) => <button key={v} onClick={() => setView(i)} aria-label={v} className={`overflow-hidden rounded-xl border-2 ${view === i ? 'border-ink' : 'border-transparent'}`}><Vis k={k} tone={p.colors[ci].h} view={i} label={false} className="h-20 w-16" /></button>)}</div>
+          <Vis k={k} tone={p.colors[ci].h} view={view} className="aspect-[4/5] w-full flex-1 rounded-3xl" /></div>
+        <div className="lg:py-6">
+          {p.was && <span className="rounded-full bg-ink px-3 py-1 text-[11px] text-cream">Promoção</span>}
+          <h1 className="mt-3 font-serif text-4xl sm:text-5xl">{p.n}</h1>
+          <p className="mt-3 text-xl">{p.was && <span className="mr-3 text-ink/40 line-through">{fmt(p.was)}</span>}{fmt(p.price)}</p>
+          <p className="mt-5 text-sm leading-relaxed text-ink/70">{p.desc}</p>
+          <p className="mt-8 text-sm font-medium">Cor: <span className="font-normal text-ink/60">{p.colors[ci].n}</span></p>
+          <div className="mt-3 flex gap-3">{p.colors.map((c, i) => <button key={c.n} aria-label={c.n} onClick={() => setCi(i)} className={`h-9 w-9 rounded-full border border-ink/20 ${i === ci ? 'ring-2 ring-ink ring-offset-2 ring-offset-cream' : ''}`} style={{ background: c.h }} />)}</div>
+          <div className="mt-8 flex items-center justify-between"><p className="text-sm font-medium">Tamanho</p><button onClick={() => setGuide(true)} className="text-sm underline underline-offset-4">Guia de medidas</button></div>
+          <div className="mt-3 flex flex-wrap gap-2">{SIZES.map(s => <button key={s} onClick={() => { setSize(s); setErr(false); }} className={`h-12 w-14 rounded-full border text-sm ${size === s ? 'border-ink bg-ink text-cream' : 'border-ink/20 hover:border-ink'}`}>{s}</button>)}</div>
+          {err && <p className="mt-2 text-sm text-red-700">Selecione um tamanho.</p>}
+          <div className="mt-8 flex gap-3">
+            <div className="flex items-center gap-4 rounded-full border border-ink/20 px-4"><button aria-label="Less" onClick={() => setQty(Math.max(1, qty - 1))}><Icon n="minus" s={16} /></button><span className="w-5 text-center">{qty}</span><button aria-label="More" onClick={() => setQty(qty + 1)}><Icon n="plus" s={16} /></button></div>
+            <Btn className="flex-1" onClick={submit}>Adicionar ao carrinho</Btn></div>
+          <div className="mt-10">
+            <Acc t="Entrega">Texto provisório: opções, prazos e custos de entrega a confirmar com a Loyen Wear.</Acc>
+            <Acc t="Trocas e devoluções">Texto provisório: prazo, condições e processo de troca a confirmar.</Acc>
+            <Acc t="Tecido e cuidados">Texto provisório: composição e instruções de cuidado a informar.</Acc></div>
+        </div>
+      </div>
+      {guide && <div className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-5" onClick={() => setGuide(false)}>
+        <div className="fade w-full max-w-md rounded-3xl bg-cream p-7" onClick={e => e.stopPropagation()}>
+          <div className="mb-4 flex justify-between"><h3 className="font-serif text-3xl">Guia de medidas</h3><button onClick={() => setGuide(false)} aria-label="Close"><Icon n="x" /></button></div>
+          <table className="w-full text-sm"><thead><tr className="border-b border-ink/15 text-left text-ink/50"><th className="py-2">Tamanho</th><th>Peito (cm)</th><th>Cintura (cm)</th></tr></thead>
+            <tbody>{SIZES.map((s, i) => <tr key={s} className="border-b border-ink/10"><td className="py-2.5">{s}</td><td>{90 + i * 6}–{96 + i * 6}</td><td>{76 + i * 6}–{82 + i * 6}</td></tr>)}</tbody></table>
+          <p className="mt-4 text-xs text-ink/50">Medidas de exemplo — substituir pela tabela oficial da Loyen Wear.</p></div></div>}
+    </section>
+  );
+}
+
+function Newsletter() {
+  const [email, setEmail] = useState(''); const [st, setSt] = useState<'idle' | 'err' | 'ok'>('idle');
+  const sub = (e: React.FormEvent) => { e.preventDefault(); setSt(/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim()) ? 'ok' : 'err'); };
+  return (
+    <form onSubmit={sub} noValidate>
+      <div className="flex gap-2"><input value={email} onChange={e => { setEmail(e.target.value); setSt('idle'); }} placeholder="Seu e-mail" aria-label="E-mail" className="w-full rounded-full border border-cream/30 bg-transparent px-5 py-3 text-sm outline-none placeholder:text-cream/40 focus:border-cream" />
+        <button className="rounded-full bg-cream px-6 text-sm font-medium text-ink">Assinar</button></div>
+      {st === 'err' && <p className="mt-2 text-sm text-red-300">Digite um e-mail válido.</p>}
+      {st === 'ok' && <p className="mt-2 flex items-center gap-1 text-sm text-beige"><Icon n="check" s={16} /> Obrigado — você está na lista (demonstração).</p>}
+    </form>
+  );
+}
+
+function Footer({ go }: any) {
+  const col = (t: string, items: [string, () => void][]) => <div><h4 className="mb-4 text-xs uppercase tracking-widest text-cream/50">{t}</h4><ul className="space-y-2.5 text-sm">{items.map(([l, f]) => <li key={l}><button onClick={f} className="hover:text-beige">{l}</button></li>)}</ul></div>;
+  return (
+    <footer className="bg-ink text-cream"><div className="mx-auto grid max-w-7xl gap-12 px-5 py-16 lg:grid-cols-[1.4fr_1fr_1fr_1.4fr] lg:px-8">
+      <div><p className="font-serif text-3xl tracking-[.28em]">LOYEN</p><p className="mt-4 max-w-xs text-sm text-cream/60">Conceito de redesign preparado como proposta. Não é o site oficial da Loyen Wear.</p>
+        <div className="mt-6 flex gap-4 text-cream/70"><a href="#" onClick={e => e.preventDefault()} aria-label="Instagram"><Icon n="insta" /></a><a href="#" onClick={e => e.preventDefault()} aria-label="Facebook"><Icon n="fb" /></a><a href="#" onClick={e => e.preventDefault()} aria-label="Email"><Icon n="mail" /></a></div></div>
+      {col('Loja', CATS.slice(0, 4).map(c => [c.n, () => go({ p: 'shop', cat: c.id })] as [string, () => void]))}
+      {col('Empresa', [['Sobre', () => go({ p: 'about' })], ['Contato', () => go({ p: 'contact' })], ['Envio (provisório)', () => go({ p: 'contact' })]])}
+      <div><h4 className="mb-4 text-xs uppercase tracking-widest text-cream/50">Newsletter</h4><p className="mb-4 text-sm text-cream/60">Novidades e ofertas exclusivas. Sem spam.</p><Newsletter />
+        <p className="mt-6 text-xs text-cream/40">email@example.com · +00 00 0000-0000 (exemplos)</p></div></div>
+      <p className="border-t border-cream/10 py-5 text-center text-xs text-cream/40">© Demonstração de conceito de design · Apenas conteúdo de exemplo</p></footer>
+  );
+}
+
+function Simple({ title, children }: any) {
+  return <section className="fade mx-auto max-w-3xl px-5 py-20"><h1 className="font-serif text-5xl">{title}</h1><div className="mt-8 space-y-5 text-ink/70">{children}</div></section>;
+}
+function Contact() {
+  const [f, setF] = useState({ n: '', e: '', m: '' }); const [st, setSt] = useState('');
+  const sub = (e: React.FormEvent) => { e.preventDefault(); setSt(!f.n || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.e) || !f.m ? 'err' : 'ok'); };
+  const inp = 'w-full rounded-2xl border border-ink/20 bg-transparent px-5 py-3 text-sm outline-none focus:border-ink';
+  return <Simple title="Contato"><p>Dados de contato provisórios. Substituir por informações verificadas.</p>
+    <form onSubmit={sub} noValidate className="space-y-3"><input className={inp} placeholder="Nome" value={f.n} onChange={e => setF({ ...f, n: e.target.value })} /><input className={inp} placeholder="E-mail" value={f.e} onChange={e => setF({ ...f, e: e.target.value })} /><textarea rows={4} className={inp} placeholder="Mensagem" value={f.m} onChange={e => setF({ ...f, m: e.target.value })} />
+      <Btn>Enviar mensagem</Btn>{st === 'err' && <p className="text-sm text-red-700">Preencha todos os campos com um e-mail válido.</p>}{st === 'ok' && <p className="text-sm">Mensagem enviada (demonstração).</p>}</form></Simple>;
+}
+
+function App() {
+  const [view, setView] = useState<View>({ p: 'home' }); const [lines, setLines] = useState<Line[]>([]);
+  const [cartOpen, setCartOpen] = useState(false); const [search, setSearch] = useState(false); const [toast, setToast] = useState('');
+  const go = (v: View) => { setView(v); window.scrollTo({ top: 0 }); };
+  const flash = (t: string) => { setToast(t); setTimeout(() => setToast(''), 2200); };
+  const addLine = (p: Product, size: string, color: string, qty = 1) => {
+    const key = `${p.id}-${size}-${color}`;
+    setLines(ls => ls.find(l => l.key === key) ? ls.map(l => l.key === key ? { ...l, qty: l.qty + qty } : l) : [...ls, { key, id: p.id, size, color, qty }]);
+    flash(`${p.n} adicionado ao carrinho`); setCartOpen(true);
+  };
+  const quick = (p: Product) => addLine(p, 'M', p.colors[0].n);
+  const setQty = (key: string, q: number) => setLines(ls => q < 1 ? ls.filter(l => l.key !== key) : ls.map(l => l.key === key ? { ...l, qty: q } : l));
+  const total = lines.reduce((s, l) => s + PRODUCTS.find(p => p.id === l.id)!.price * l.qty, 0);
+  const count = lines.reduce((s, l) => s + l.qty, 0);
+  return (
+    <>
+      <div className="bg-ink py-2 text-center text-xs tracking-wide text-cream/80">Conceito de redesign · todo o conteúdo é material de exemplo</div>
+      <Nav go={go} cartCount={count} openCart={() => setCartOpen(true)} openSearch={() => setSearch(true)} />
+      <main>
+        {view.p === 'home' && <><Hero go={go} /><Categories go={go} /><Featured go={go} add={quick} /><Trust /></>}
+        {view.p === 'shop' && <Shop key={view.cat || 'all'} cat={view.cat} go={go} add={quick} />}
+        {view.p === 'product' && <ProductPage key={view.id} id={view.id} go={go} addLine={addLine} />}
+        {view.p === 'about' && <Simple title="Sobre"><p>História da marca provisória. Substituir pela história, valores e notas de confecção verificados da Loyen Wear.</p><Btn onClick={() => go({ p: 'shop' })}>Explorar a coleção</Btn></Simple>}
+        {view.p === 'contact' && <Contact />}
+      </main>
+      {view.p !== 'contact' && view.p !== 'about' && view.p !== 'home' && <Trust />}
+      <Footer go={go} />
+      {search && <SearchOverlay close={() => setSearch(false)} go={go} />}
+      {cartOpen && <CartDrawer lines={lines} setQty={setQty} total={total} close={() => setCartOpen(false)} checkout={() => { setLines([]); setCartOpen(false); flash('Checkout de demonstração concluído — nenhum pedido realizado'); }} />}
+      {toast && <div className="fade fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-ink px-6 py-3 text-sm text-cream shadow-xl">{toast}</div>}
+    </>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')!).render(<App />);
+</script>
+<script>
+try {
+  var out = Babel.transform(document.getElementById('src').textContent, { filename: 'app.tsx', presets: [['typescript', { isTSX: true, allExtensions: true }], 'react'] }).code;
+  (0, eval)(out);
+} catch (e) {
+  console.error(e);
+  document.getElementById('root').innerHTML = '<pre style="padding:24px;white-space:pre-wrap">Render error: ' + e.message + '</pre>';
+}
+</script>
+</body>
+</html>
